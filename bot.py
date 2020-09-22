@@ -52,6 +52,7 @@ def save_last_index(index):
  
 
 def send_new_posts(items, last_id):
+    print("ok1")
     #print(len(items))
     items = items[::-1]
     print(len(items))
@@ -101,8 +102,10 @@ def send_new_posts(items, last_id):
         #print(msg)
         #print(hashtags)
         #bot.send_message(CHANNEL_NAME, msg)
-        
+        print(len(msg))
         i = len(msg) - 1
+        if(i <= 0):
+            continue
         while msg[i] == '\n' or msg[i] == ' ':
             msg = msg[:-1]
             i -= 1
@@ -118,6 +121,7 @@ def send_new_posts(items, last_id):
         time.sleep(1)
         print("OKKK")
         if not 'attachments' in item.keys():
+            print("not attachmenets")
             save_last_index(item['id'])
             continue
 
@@ -130,6 +134,7 @@ def send_new_posts(items, last_id):
                 sizes = it['photo']['sizes']
                 max_height = 0
                 max_url = ''
+                print("1")
                 for photo in sizes:
                     height = int(photo['height'])
                     url = photo['url']
@@ -138,7 +143,9 @@ def send_new_posts(items, last_id):
                         max_url = url
                 print(max_height, max_url)
                 one_url = max_url
+                print(11)
                 photos.append(InputMediaPhoto(max_url))
+                print(2)
         print(photos)
         #if(len(photos) == 10):
         #    photos = photos[:-1]
@@ -187,12 +194,66 @@ def check_new_posts_vk():
     logging.info('[VK] Finished scanning')
     return
 
+'''
+def f_get_data(name):
+    f = open(name)
+    data = {}
+    for line in f:
+        m = line.split()
+        data[m[0]] = set(m[1:])
+
+    f.close()
+    return data
+
+
+def f_update_data(data, name):
+    f = open(name, 'w')
+    for key, val in data.items():
+        f.write(key + ' ' + ' '.join(str(e) for e in list(val)) + '\n')
+
+    f.close()
+
+@bot.message_handler(content_types=["text"])
+def add_hashtags(message):
+    print("message")
+    m = message.text.split()
+    key = m[0]
+    tags = m[1:]
+    username = message.from_user.username
+    name = 'hashtags_map.txt'
+
+    hashtags = f_get_data(name)
+    print(tags)
+
+    if key == 'add':
+        if username in hashtags.keys():
+            hashtags[username].update(tags)
+        else:
+            hashtags[username] = set(tags)
+        f_update_data(hashtags, name)
+    elif key == 'del':
+        if username in hashtags.keys():
+            for tag in tags:
+                hashtags[username].discard (tag)
+            update_data(hashtags, name)
+
+
+def proccess_polling():
+    global bot
+    bot.polling(none_stop=True)
+
+from multiprocessing import Process
+'''
 if __name__ == '__main__':
+    #proc = Process(target=proccess_polling)
+    #proc.start()
+
     SINGLE_RUN = 0
     logging.getLogger('requests').setLevel(logging.CRITICAL)
     logging.basicConfig(format='[%(asctime)s] %(filename)s:%(lineno)d %(levelname)s - %(message)s', level=logging.INFO, filename='bot_log.log', datefmt='%d.%m.%Y %H:%M:%S')
     if not SINGLE_RUN:
         while True:
+            print("news")
             check_new_posts_vk()
             logging.info('[App] Script went to sleep.')
             time.sleep(60*5)
