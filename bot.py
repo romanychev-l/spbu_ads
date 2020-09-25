@@ -1,4 +1,5 @@
 import config
+import messages
 import telebot
 from telebot import types
 import requests
@@ -11,27 +12,32 @@ import json
 from telebot.types import InputMediaPhoto
 import pymongo
 from pymongo import MongoClient
+import pprint
+
 
 mongo_user = config.mongo_user
 mongo_pass = config.mongo_pass
 mongo_db = config.mongo_db
-link = 'mongodb+srv://{}:{}@cluster0-e2dix.mongodb.net/{}?retryWrites=true&w=majority'.format("Leonid", mongo_pass, mongo_db)
+link = 'mongodb+srv://{}:{}@cluster0-e2dix.mongodb.net/{}?\
+retryWrites=true&w=majority'.format("Leonid", mongo_pass, mongo_db)
 
-client = MongoClient(link)
-db = client.telegrambot
-chat_id_hashtags = db.chatid_hashtags
-hashtag_chat_ids = db.hashtags_chatid
+client = MongoClient(link, connect=False)
+db = client[config.mongo_db_name]
+
+chat_id_hashtags = db.chat_id_hashtags
+hashtag_chat_ids = db.hashtag_chat_ids
 chat_id_status = db.chat_id_status
 posts = db.posts
 global_post = 0
 
 bot = telebot.TeleBot(config.token)
 site = 'https://vk.com/spbu_advert'
-URL_VK = 'https://api.vk.com/method/wall.get?domain=spbu_advert&count=10&filter=owner&access_token=566214435662144356621443e5560a2ea255662566214430a2a6f6205658190bc5351eb&v=5.100'
+URL_VK = config.URL_VK
 
 FILENAME_VK = 'last_known_id.txt'
 BASE_POST_URL = 'https://m.vk.com/wall-50260527_21339_'
-CHANNEL_NAME = '@AnnouncementsPUNK'
+CHANNEL_NAME = config.channel_name
+print(CHANNEL_NAME)
 
 def get_html(site):
     r = requests.get(site)
@@ -39,7 +45,6 @@ def get_html(site):
 
 def get_page_data(html):
     soup = BeautifulSoup(html, 'lxml')
-    
     wall = soup.findAll('div', class_='wall_item')
 
     return str(wall)
@@ -64,71 +69,44 @@ def save_last_index(index):
         except:
             file.write(index)
             logging.info('New last_id (VK) is {!s}'.format(index))
- 
+
 
 def send_new_posts(items, last_id):
     items = items[::-1]
     print(len(items))
     for item in items:
+        print(item)
         if int(item['id']) <= last_id:
             continue
         #link = '{!s}{!s}'.format(BASE_POST_URL, item['id'])
         print(item['text'][:50])
-        hashtags = []
-        msg = ''
-        text = item['text']
-        i = 0
-        while i < len(text):
-            if text[i] == '#':
-                i += 1
-                tag = ''
-                while i < len(text) and not(text[i] == '\n' or text[i] == ' '):
-                    if text[i] >= 'а' and text[i] <= 'я' or text [i] == '_':
-                        tag += text[i]
-                        i += 1
-                    else:
-                        while i < len(text) and not (text[i] == '\n' or text[i] == ' '):
-                            i += 1
-                        break
-                while i < len(text) and (text[i] == ' ' or text[i] == '\n'):
-                    i += 1
-                hashtags.append(tag)
-                
-                if(i < len(text)):
-                    print('m' + text[i-1] + 't' + text[i] + tag)
-            else:
-                msg += text[i]
-                i += 1
 
-        i = len(msg) - 1
-        if(i <= 0):
-            continue
-        while msg[i] == '\n' or msg[i] == ' ':
-            msg = msg[:-1]
-            i -= 1
-        #print(msg)
-        msg += '\n\n'
-        for i in hashtags:
-            msg += '#' + i + '\n'
-        #print(item.keys())
+        msg = item['text'].replace('@spbu_advert', '')
         if 'signer_id' in item.keys():
-            msg += '\nhttps://vk.com/id' + str(item['signer_id'])
-        #print(msg)
-        mes_in_chat = bot.send_message(CHANNEL_NAME, msg)
+            msg += '\n\nАвтор: vk.com/id' + str(item['signer_id'])
+
+        msg += '\n\nИсточник: vk.com/spbu_advert'
+
+        msg_in_chat = bot.send_message(CHANNEL_NAME, msg)
         #print(mes_in_chat)
-        
-        mes_id = mes_in_chat.message_id
-        print(mes_id)
-        for tag in hashtags:
-            chat_ids = hashtag_chat_ids.find_one({'tag': tag})
-            if chat_ids == None:
-                continue
-            chat_ids = chat_ids['chat_ids']
-            for chat_id in chat_ids:
-                bot.forward_message(chat_id, -1001151046874, mes_id)
+
+        msg_id = msg_in_chat.message_id
+        print(msg_id)
+        used = {}
+
+        for doc in hashtag_chat_ids.find():
+            tag = doc['tag']
+            chat_ids = doc['chat_ids']
+            if tag in msg_in_chat.text:
+                for chat_id in chat_ids:
+                    if not chat_id in used.keys():
+                        bot.forward_message(chat_id, config.channel_name, msg_in_chat.message_id)
+                        used[chat_id] = 1
+                        time.sleep(1)
+
 
         time.sleep(1)
-        
+
         #print("OKKK")
         if not 'attachments' in item.keys():
             print("not attachmenets")
@@ -170,7 +148,7 @@ def check_new_posts_vk():
         logging.info('Last ID (VK) = {!s}'.format(last_id))
     try:
         feed = get_data()
-        
+
         if feed is not None:
             entries = feed['response']['items']
             try:
@@ -179,7 +157,8 @@ def check_new_posts_vk():
             except KeyError:
                 send_new_posts(entries, last_id)
     except Exception as ex:
-        logging.error('Exception of type {!s} in check_new_post(): {!s}'.format(type(ex).__name__, str(ex)))
+        logging.error('Exception of type {!s} in check_new_post(): {!s}'.\
+        format(type(ex).__name__, str(ex)))
         pass
     logging.info('[VK] Finished scanning')
     return
@@ -188,11 +167,7 @@ def check_new_posts_vk():
 @bot.message_handler(commands=['start'])
 def start(msg):
     chat_id = msg.chat.id
-    bot.send_message(chat_id, "Для бота доступны следующие команды:\n\
-/add_tags - добавить тэги\n\
-/del_tags - удалить теги\n\
-/show_tags - показать мои теги\n\
-/new_post - создать новый пост\n")
+    bot.send_message(chat_id, messages.command_start)
 
 
 @bot.message_handler(commands=['add_tags'])
@@ -201,8 +176,7 @@ def _add_tags(msg):
     str_chat_id = str(chat_id)
     chat_id_status.delete_one({'chat_id': str_chat_id})
     chat_id_status.insert_one({'chat_id': str_chat_id, 'status': 'add'})
-    bot.send_message(chat_id, "В следующем сообщении отправьте мне список тегов, на которые хотите подписаться. \
-Формат сообщения должен быть таким:\ntag1 tag2 tag3")
+    bot.send_message(chat_id, messages.command_add)
 
 def add_tags(msg):
     chat_id = msg.chat.id
@@ -219,7 +193,7 @@ def add_tags(msg):
         old_tags = new_tags
 
     chat_id_hashtags.insert_one({'chat_id': str_chat_id, 'tags': list(set(old_tags))})
-    
+
     for tag in new_tags:
         tag_chat_ids = hashtag_chat_ids.find_one({'tag': tag})
         hashtag_chat_ids.delete_one({'tag': tag})
@@ -233,7 +207,7 @@ def add_tags(msg):
         hashtag_chat_ids.insert_one({'tag': tag, 'chat_ids': list(set(tag_chat_ids))})
 
     chat_id_status.delete_one({'chat_id': str_chat_id})
-        
+
 
 @bot.message_handler(commands=['del_tags'])
 def _del_tags(msg):
@@ -241,8 +215,8 @@ def _del_tags(msg):
     str_chat_id = str(chat_id)
     chat_id_status.delete_one({'chat_id': str_chat_id})
     chat_id_status.insert_one({'chat_id': str_chat_id, 'status': 'del'})
-    bot.send_message(chat_id, "В следующем сообщении отправьте мне список тегов, от которых хотите отписаться. \
-Формат сообщения должен быть таким:\ntag1 tag2 tag3")
+    bot.send_message(chat_id, messages.command_del)
+
 
 def del_tags(msg):
     chat_id = msg.chat.id
@@ -251,14 +225,14 @@ def del_tags(msg):
 
     old_tags = chat_id_hashtags.find_one({'chat_id': str_chat_id})
     chat_id_hashtags.delete_one({'chat_id': str_chat_id})
-    
+
     if old_tags != None:
         old_tags = list(old_tags['tags'])
         old_tags = list(set(old_tags).difference(set(new_tags)))
-        
+
         if len(old_tags) > 0:
             chat_id_hashtags.insert_one({'chat_id': str_chat_id, 'tags': old_tags})
-    
+
     for tag in new_tags:
         tag_chat_ids = hashtag_chat_ids.find_one({'tag': tag})
         hashtag_chat_ids.delete_one({'tag': tag})
@@ -267,7 +241,7 @@ def del_tags(msg):
             tag_chat_ids = tag_chat_ids['chat_ids']
             if str_chat_id in tag_chat_ids:
                 tag_chat_ids.remove(str_chat_id)
-            
+
             if len(tag_chat_ids) > 0:
                 hashtag_chat_ids.insert_one({'tag': tag, 'chat_ids': tag_chat_ids})
 
@@ -280,33 +254,34 @@ def _show_tags(msg):
     str_chat_id = str(chat_id)
     tags = chat_id_hashtags.find_one({'chat_id': str_chat_id})
     if tags == None:
-        bot.send_message(chat_id, "У Вас еще нет тегов. Чтобы их добавить нажмите /add_tags")
+        bot.send_message(chat_id, messages.command_show_tags_1)
     else:
         tags = tags['tags']
-        bot.send_message(chat_id, "Вы подписаны на следующие теги:\n" + ' '.join(tags))
+        bot.send_message(chat_id, messages.command_show_tags_2 + ' '.join(tags))
 
- 
+
 @bot.message_handler(commands=['new_post'])
 def _new_post(msg):
     chat_id = msg.chat.id
     str_chat_id = str(chat_id)
+    if msg.from_user.username == None:
+        bot.send_message(chat_id, messages.not_username)
+        return
     chat_id_status.delete_one({'chat_id': str_chat_id})
     chat_id_status.insert_one({'chat_id': str_chat_id, 'status': 'new_post'})
-    bot.send_message(chat_id, "Отправьте мне текст Вашего обьявления.\n\
-В конце сообщения можно указать список хэштегов - с их помощь продать\купить тавар можно быстрее.\n\
-Каждый хэштег должен начинаться со знака #.\n\
-Все хэштеги должны быть разделены пробелом.")
- 
+    bot.send_message(chat_id, messages.command_new_post_1)
+
 
 def new_post(msg):
     chat_id = msg.chat.id
     str_chat_id = str(chat_id)
 
+    print(msg.text)
+
     posts.delete_one({'chat_id': str_chat_id})
     posts.insert_one({'chat_id': str_chat_id, 'username': msg.from_user.username,\
         'text': msg.text + '\n\n' + '@' + msg.from_user.username, 'status': 'writing', 'photos': []})
-    bot.send_message(chat_id, "Отлично! Теперь пришлите мне фотографии.\
-После загрузки последней фотографии отправьте любое сообщение - чтобы Я понял, что Вы закончили.")
+    bot.send_message(chat_id, messages.command_new_post_2)
 
     chat_id_status.delete_one({'chat_id': str_chat_id})
     chat_id_status.insert_one({'chat_id': str_chat_id, 'status': 'add_photo'})
@@ -316,7 +291,7 @@ def new_post(msg):
 def add_photos(msg):
     chat_id = msg.chat.id
     str_chat_id = str(chat_id)
-    
+
     post = posts.find_one({'chat_id': str_chat_id})
     posts.delete_one({'chat_id': str_chat_id})
 
@@ -332,6 +307,20 @@ def add_photos(msg):
     posts.insert_one(post)
 
 
+def send_message_to_subscribers(msg, pr_chat_id):
+    used = {}
+
+    for doc in hashtag_chat_ids.find():
+        tag = doc['tag']
+        chat_ids = doc['chat_ids']
+        if tag in msg.text:
+            for chat_id in chat_ids:
+                if not chat_id in used.keys() and chat_id != pr_chat_id:
+                    bot.forward_message(chat_id, config.channel_name, msg.message_id)
+                    used[chat_id] = 1
+                    time.sleep(1)
+
+
 def send_global_post():
     global global_post
     str_chat_id = global_post['chat_id']
@@ -340,9 +329,9 @@ def send_global_post():
     keyboard = types.InlineKeyboardMarkup()
     callback_button = types.InlineKeyboardButton(text="Активное", callback_data="active")
     keyboard.add(callback_button)
-    
+
     msg = bot.send_message(CHANNEL_NAME, global_post['text'], reply_markup=keyboard)
-   
+
     posts.delete_one(global_post)
     global_post['status'] = 'active'
     global_post['mes_id'] = msg.message_id
@@ -356,6 +345,20 @@ def send_global_post():
         photos = [InputMediaPhoto(photo) for photo in photos]
         bot.send_media_group(CHANNEL_NAME, photos)
 
+    bot.send_message(chat_id, messages.post_published)
+    send_message_to_subscribers(msg, str_chat_id)
+
+def delete_username(text):
+    n = len(text)
+    i = n - 1
+    while(i >= 0 and text[i] != '@'):
+        i -= 1
+    i -= 2
+
+    if i < 1:
+        return
+
+    return text[:i]
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
@@ -366,11 +369,12 @@ def callback_inline(call):
         post = posts.find_one({'mes_id': msg.message_id})
 
         if call.data == 'active' and post != None and post['username'] == username:
-            
+
             keyboard = types.InlineKeyboardMarkup()
             callback_button = types.InlineKeyboardButton(text="Неактивное", callback_data="notactive")
             keyboard.add(callback_button)
-            
+
+            bot.edit_message_text(chat_id=CHANNEL_NAME, message_id=msg.message_id, text=delete_username(msg.text))
             bot.edit_message_reply_markup(chat_id=CHANNEL_NAME, message_id=msg.message_id, reply_markup=keyboard)
             posts.delete_one({'mes_id': msg.message_id})
             print("delete suc")
@@ -388,9 +392,9 @@ def main_logic(msg):
             return
         elif msg.text == 'get':
             global_post = posts.find_one({'status': 'checking'})
-            
+
             if global_post == None:
-                bot.send_message(chat_id, "Постов для проверки необнаружено")
+                bot.send_message(chat_id, messages.main_logic_1)
                 return
 
             bot.send_message(chat_id, global_post['text'])
@@ -406,12 +410,11 @@ def main_logic(msg):
             send_global_post()
             posts.update_one(global_post, {'$set': {'status': 'active'}})
             return
-        
+
 
     status = chat_id_status.find_one({'chat_id': str_chat_id})
     if status == None:
-        bot.send_message(chat_id, "Начать любое заимодействие с ботом можно через команды.\n\
-Список команд доступен через команду \start")
+        bot.send_message(chat_id, messages.main_logic_2)
         return
 
     status = status['status']
@@ -425,6 +428,8 @@ def main_logic(msg):
         new_post(msg)
     elif status == 'add_photo':
         posts.update_one({'chat_id': str_chat_id}, {'$set':{'status': 'checking'}})
+        bot.send_message(chat_id, messages.post_create)
+        bot.send_message(config.my_chat_id, messages.new_post_checking)
         chat_id_status.delete_one({'chat_id': str_chat_id})
 
 
@@ -463,6 +468,6 @@ if __name__ == '__main__':
         bot.polling(none_stop=True)
     except Exception as e:
         print(e.__class__)
-        print("not ok") 
-    
-    print(end)
+        print("not ok")
+
+    print('end')
