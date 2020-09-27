@@ -75,7 +75,7 @@ def send_new_posts(items, last_id):
     items = items[::-1]
     print(len(items))
     for item in items:
-        print(item)
+        #print(item)
         if int(item['id']) <= last_id:
             continue
         #link = '{!s}{!s}'.format(BASE_POST_URL, item['id'])
@@ -91,7 +91,7 @@ def send_new_posts(items, last_id):
         #print(mes_in_chat)
 
         msg_id = msg_in_chat.message_id
-        print(msg_id)
+        #print(msg_id)
         used = {}
 
         for doc in hashtag_chat_ids.find():
@@ -323,6 +323,7 @@ def send_message_to_subscribers(msg, pr_chat_id):
 
 def send_global_post():
     global global_post
+    print(global_post)
     str_chat_id = global_post['chat_id']
     chat_id = int(str_chat_id)
 
@@ -448,7 +449,7 @@ def process_while():
             print("news")
             check_new_posts_vk()
             logging.info('[App] Script went to sleep.')
-            time.sleep(60*5)
+            time.sleep(60)
     else:
         check_new_posts_vk()
     logging.info('[App] Script exited.\n')
