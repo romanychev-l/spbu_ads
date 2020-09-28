@@ -85,9 +85,9 @@ def send_new_posts(items, last_id):
         if 'signer_id' in item.keys():
             msg += '\n\nАвтор: vk.com/id' + str(item['signer_id'])
 
-        msg += '\n\nИсточник: vk.com/spbu_advert'
+        msg += '\n\nСсылка на пост: vk.com//wall-50260527_' + str(item['id'])
 
-        msg_in_chat = bot.send_message(CHANNEL_NAME, msg)
+        msg_in_chat = bot.send_message(CHANNEL_NAME, msg, disable_web_page_preview=True)
         #print(mes_in_chat)
 
         msg_id = msg_in_chat.message_id
@@ -97,7 +97,7 @@ def send_new_posts(items, last_id):
         for doc in hashtag_chat_ids.find():
             tag = doc['tag']
             chat_ids = doc['chat_ids']
-            if tag in msg_in_chat.text:
+            if tag in msg_in_chat.text.lower():
                 for chat_id in chat_ids:
                     if not chat_id in used.keys():
                         bot.forward_message(chat_id, config.channel_name, msg_in_chat.message_id)
@@ -181,7 +181,7 @@ def _add_tags(msg):
 def add_tags(msg):
     chat_id = msg.chat.id
     str_chat_id = str(chat_id)
-    new_tags = msg.text.split(' ')
+    new_tags = msg.text.lower().split(' ')
 
     old_tags = chat_id_hashtags.find_one({'chat_id': str_chat_id})
     chat_id_hashtags.delete_one({'chat_id': str_chat_id})
@@ -221,7 +221,7 @@ def _del_tags(msg):
 def del_tags(msg):
     chat_id = msg.chat.id
     str_chat_id = str(chat_id)
-    new_tags = msg.text.split(' ')
+    new_tags = msg.text.lower().split(' ')
 
     old_tags = chat_id_hashtags.find_one({'chat_id': str_chat_id})
     chat_id_hashtags.delete_one({'chat_id': str_chat_id})
@@ -313,7 +313,7 @@ def send_message_to_subscribers(msg, pr_chat_id):
     for doc in hashtag_chat_ids.find():
         tag = doc['tag']
         chat_ids = doc['chat_ids']
-        if tag in msg.text:
+        if tag in msg.text.lower():
             for chat_id in chat_ids:
                 if not chat_id in used.keys() and chat_id != pr_chat_id:
                     bot.forward_message(chat_id, config.channel_name, msg.message_id)
