@@ -82,16 +82,17 @@ def send_new_posts(items, last_id):
         print(item['text'][:50])
 
         msg = item['text'].replace('@spbu_advert', '')
+        link_autor = ''
         if 'signer_id' in item.keys():
-            msg += '\n\nАвтор: vk.com/id' + str(item['signer_id'])
+            link_autor = 'vk.com/id' + str(item['signer_id'])
 
-        msg += '\n\nСсылка на пост: vk.com//wall-50260527_' + str(item['id'])
+        link_post = 'vk.com/wall-50260527_' + str(item['id'])
 
-        msg_in_chat = bot.send_message(CHANNEL_NAME, msg, disable_web_page_preview=True)
-        #print(mes_in_chat)
+        #msg += '\n\nСсылка на пост: vk.com/wall-50260527_' + str(item['id'])
+        msg = msg + '\n\n[Автор]({})'.format(link_autor) + '\n[Ссылка на пост]({})'.format(link_post)
+        msg_in_chat = bot.send_message(CHANNEL_NAME, msg, parse_mode='MARKDOWN', disable_web_page_preview=True)
 
         msg_id = msg_in_chat.message_id
-        #print(msg_id)
         used = {}
 
         for doc in hashtag_chat_ids.find():
@@ -389,7 +390,7 @@ def main_logic(msg):
     username = msg.from_user.username
     if username == 'romanychev':
         if msg.text == 'size':
-            bot.send_message(chat_id, posts.find().count())
+            bot.send_message(chat_id, posts.count_documents({}))
             return
         elif msg.text == 'get':
             global_post = posts.find_one({'status': 'checking'})
@@ -411,6 +412,10 @@ def main_logic(msg):
             send_global_post()
             posts.update_one(global_post, {'$set': {'status': 'active'}})
             return
+        elif msg.text[0:3] == 'nok':
+            chat_id_from = int(global_post['chat_id'])
+            posts.delete_one(global_post)
+            bot.send_message(chat_id_from, messages.nok + msg.text[4:])
 
 
     status = chat_id_status.find_one({'chat_id': str_chat_id})
