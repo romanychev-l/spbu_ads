@@ -3,6 +3,14 @@ import messages
 from telebot import types
 import pymongo
 from telebot.types import InputMediaPhoto
+import requests
+from bs4 import BeautifulSoup
+import time
+import eventlet
+import logging
+from time import sleep
+import json
+import pprint
 
 
 def add_tags(msg, db):
