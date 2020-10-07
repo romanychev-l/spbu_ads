@@ -82,7 +82,8 @@ def new_post(bot, msg, db):
 
     db.posts.delete_one({'chat_id': str_chat_id})
     db.posts.insert_one({'chat_id': str_chat_id, 'username': msg.from_user.username,\
-        'text': msg.text + '\n\n' + '@' + msg.from_user.username, 'status': 'writing', 'photos': []})
+        'text': msg.text + '\n\n' + '@' + msg.from_user.username,\
+        'status': 'writing', 'photos': [], 'mid': 0})
     bot.send_message(chat_id, messages.command_new_post_2)
 
     db.chat_id_status.delete_one({'chat_id': str_chat_id})

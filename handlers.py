@@ -55,20 +55,14 @@ def _new_post(bot, msg, db):
 def add_photos(bot, msg, db):
     chat_id = msg.chat.id
     str_chat_id = str(chat_id)
-
     post = db.posts.find_one({'chat_id': str_chat_id})
-    db.posts.delete_one({'chat_id': str_chat_id})
-
     mid = msg.media_group_id
+    db.posts.update_one(post, {"$set": {'mid': mid}})
     photos = msg.photo
-    file_id = 0
-    input_media = []
     for PhotoSize in photos:
         file_id = PhotoSize.file_id
-        input_media.append(InputMediaPhoto(file_id))
-        post['photos'].append(file_id)
+        db.photos.insert_one({'mid': mid, 'file_id': file_id})
         break
-    db.posts.insert_one(post)
 
 
 def callback_inline(bot, call, db):
@@ -148,6 +142,15 @@ def main_logic(bot, msg, db):
     elif status == 'new_post':
         fun.new_post(bot, msg, db)
     elif status == 'add_photo':
+        mid = db.posts.find_one({'chat_id': str_chat_id})['mid']
+
+        photos_union = []
+        for photo in db.photos.find({'mid': mid}):
+            photos_union.append(photo['file_id'])
+        db.photos.delete_many({'mid': mid})
+
+        db.posts.update_one({'chat_id': str_chat_id}, {"$set": {'photos': photos_union}})
+
         db.posts.update_one({'chat_id': str_chat_id}, {'$set':{'status': 'checking'}})
         bot.send_message(chat_id, messages.post_create)
         bot.send_message(config.my_chat_id, messages.new_post_checking)
