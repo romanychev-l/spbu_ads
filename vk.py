@@ -35,6 +35,22 @@ def save_last_index(index):
             logging.info('New last_id (VK) is {!s}'.format(index))
 
 
+def delete_chat_id(chat_id, db):
+    print("start")
+    db.chat_id_hashtags.delete_one({'chat_id': chat_id})
+    print("!")
+    for doc in db.hashtag_chat_ids.find():
+        print("!!")
+        tag = doc['tag']
+        chat_ids = doc['chat_ids']
+        if chat_id in chat_ids:
+            chat_ids.remove(chat_id)
+        if len(chat_ids) == 0:
+            db.hashtag_chat_ids.delete_one({'tag': tag})
+        else:
+            db.hashtag_chat_ids.update_one({'tag': tag}, {"$set": {'chat_ids': chat_ids}})
+    print("end")
+
 def send_new_posts(bot, items, last_id, db):
     items = items[::-1]
     for item in items:
@@ -60,9 +76,16 @@ def send_new_posts(bot, items, last_id, db):
             if tag in msg_in_chat.text.lower():
                 for chat_id in chat_ids:
                     if not chat_id in used.keys():
-                        bot.forward_message(int(chat_id), config.channel_name, msg_in_chat.message_id)
-                        used[chat_id] = 1
-                        time.sleep(2)
+                        try:
+                            bot.forward_message(int(chat_id), config.channel_name, msg_in_chat.message_id)
+                            used[chat_id] = 1
+                            time.sleep(2)
+
+                        except Exception as ex:
+                            print("OPS")
+                            delete_chat_id(chat_id, db)
+                        #used[chat_id] = 1
+                        #time.sleep(2)
 
         time.sleep(5)
 
@@ -114,6 +137,7 @@ def check_new_posts_vk(bot, db):
             except KeyError:
                 send_new_posts(bot, entries, last_id, db)
     except Exception as ex:
+        print("nnnnnnnn")
         logging.error('Exception of type {!s} in check_new_post(): {!s}'.\
         format(type(ex).__name__, str(ex)))
         pass
