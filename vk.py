@@ -51,21 +51,20 @@ def send_new_posts(bot, items, last_id, db):
         msg = msg + '\n\n[Автор]({})'.format(link_autor) + '\n[Ссылка на пост]({})'.format(link_post)
         msg_in_chat = bot.send_message(config.channel_name, msg, parse_mode='MARKDOWN', disable_web_page_preview=True)
 
+        time.sleep(2)
         msg_id = msg_in_chat.message_id
         used = {}
-        print(msg_id)
         for doc in db.hashtag_chat_ids.find():
             tag = doc['tag']
             chat_ids = doc['chat_ids']
             if tag in msg_in_chat.text.lower():
                 for chat_id in chat_ids:
                     if not chat_id in used.keys():
-                        bot.forward_message(chat_id, config.channel_name, msg_in_chat.message_id)
+                        bot.forward_message(int(chat_id), config.channel_name, msg_in_chat.message_id)
                         used[chat_id] = 1
-                        time.sleep(1)
+                        time.sleep(2)
 
-
-        time.sleep(1)
+        time.sleep(5)
 
         if not 'attachments' in item.keys():
             print("not attachmenets")
@@ -94,7 +93,7 @@ def send_new_posts(bot, items, last_id, db):
         elif len(photos) == 1:
             bot.send_photo(config.channel_name, one_url)
         save_last_index(item['id'])
-        time.sleep(5)
+        time.sleep(len(photos))
     return
 
 def check_new_posts_vk(bot, db):
