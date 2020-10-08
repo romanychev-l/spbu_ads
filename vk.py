@@ -58,13 +58,16 @@ def send_new_posts(bot, items, last_id, db):
             continue
 
         msg = item['text'].replace('@spbu_advert', '').replace('_', '\_').replace('*', '\*')
+        link_post = 'vk.com/wall-50260527_' + str(item['id'])
+
         link_autor = ''
         if 'signer_id' in item.keys():
             link_autor = 'vk.com/id' + str(item['signer_id'])
 
-        link_post = 'vk.com/wall-50260527_' + str(item['id'])
+            msg = msg + '\n\n[Автор]({})'.format(link_autor) + '\n[Ссылка на пост]({})'.format(link_post)
+        else:
+            msg = msg + '\n\n[Ссылка на пост]({})'.format(link_post)
 
-        msg = msg + '\n\n[Автор]({})'.format(link_autor) + '\n[Ссылка на пост]({})'.format(link_post)
         msg_in_chat = bot.send_message(config.channel_name, msg, parse_mode='MARKDOWN', disable_web_page_preview=True)
 
         time.sleep(2)
