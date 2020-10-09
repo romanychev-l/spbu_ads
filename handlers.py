@@ -6,9 +6,6 @@ from telebot.types import InputMediaPhoto
 import pymongo
 
 
-
-#from main import add_tags
-
 def start(bot, msg):
     chat_id = msg.chat.id
     bot.send_message(chat_id, messages.command_start)
@@ -72,19 +69,26 @@ def callback_inline(bot, call, db):
         msg = call.message
         post = db.posts.find_one({'mes_id': msg.message_id})
 
-        if call.data == 'active' and post != None and post['username'] == username:
+        if (call.data == 'active' and post != None and
+                post['username'] == username):
 
             keyboard = types.InlineKeyboardMarkup()
-            callback_button = types.InlineKeyboardButton(text="Неактивное", callback_data="notactive")
+            callback_button = types.InlineKeyboardButton(
+                text="Неактивное", callback_data="notactive"
+                )
             keyboard.add(callback_button)
 
-            bot.edit_message_text(chat_id=config.channel_name, message_id=msg.message_id, text=fun.delete_username(msg.text))
-            bot.edit_message_reply_markup(chat_id=config.channel_name, message_id=msg.message_id, reply_markup=keyboard)
+            bot.edit_message_text(
+                chat_id=config.channel_name, message_id=msg.message_id,
+                text=fun.delete_username(msg.text)
+                )
+            bot.edit_message_reply_markup(chat_id=config.channel_name,
+                message_id=msg.message_id, reply_markup=keyboard
+                )
             db.posts.delete_one({'mes_id': msg.message_id})
-            print("delete suc")
+
 
 def main_logic(bot, msg, db):
-    #global global_post
     chat_id = msg.chat.id
     str_chat_id = str(chat_id)
 
@@ -133,7 +137,6 @@ def main_logic(bot, msg, db):
         return
 
     status = status['status']
-    print(status)
 
     if status == 'add':
         fun.add_tags(msg, db)
@@ -149,11 +152,11 @@ def main_logic(bot, msg, db):
             photos_union.append(photo['file_id'])
         db.photos.delete_many({'mid': mid})
 
-        db.posts.update_one({'chat_id': str_chat_id}, {"$set": {'photos': photos_union}})
+        db.posts.update_one({'chat_id': str_chat_id},
+                            {"$set": {'photos': photos_union}})
 
-        db.posts.update_one({'chat_id': str_chat_id}, {'$set':{'status': 'checking'}})
+        db.posts.update_one({'chat_id': str_chat_id},
+                            {'$set':{'status': 'checking'}})
         bot.send_message(chat_id, messages.post_create)
         bot.send_message(config.my_chat_id, messages.new_post_checking)
         db.chat_id_status.delete_one({'chat_id': str_chat_id})
-
-

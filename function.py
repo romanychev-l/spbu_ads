@@ -27,7 +27,8 @@ def add_tags(msg, db):
     else:
         old_tags = new_tags
 
-    db.chat_id_hashtags.insert_one({'chat_id': str_chat_id, 'tags': list(set(old_tags))})
+    db.chat_id_hashtags.insert_one({'chat_id': str_chat_id,
+                                    'tags': list(set(old_tags))})
 
     for tag in new_tags:
         tag_chat_ids = db.hashtag_chat_ids.find_one({'tag': tag})
@@ -39,7 +40,8 @@ def add_tags(msg, db):
         else:
             tag_chat_ids = [str_chat_id]
 
-        db.hashtag_chat_ids.insert_one({'tag': tag, 'chat_ids': list(set(tag_chat_ids))})
+        db.hashtag_chat_ids.insert_one({'tag': tag,
+                                        'chat_ids': list(set(tag_chat_ids))})
 
     db.chat_id_status.delete_one({'chat_id': str_chat_id})
 
@@ -57,7 +59,8 @@ def del_tags(msg, db):
         old_tags = list(set(old_tags).difference(set(new_tags)))
 
         if len(old_tags) > 0:
-            db.chat_id_hashtags.insert_one({'chat_id': str_chat_id, 'tags': old_tags})
+            db.chat_id_hashtags.insert_one({'chat_id': str_chat_id,
+                                            'tags': old_tags})
 
     for tag in new_tags:
         tag_chat_ids = db.hashtag_chat_ids.find_one({'tag': tag})
@@ -69,7 +72,8 @@ def del_tags(msg, db):
                 tag_chat_ids.remove(str_chat_id)
 
             if len(tag_chat_ids) > 0:
-                db.hashtag_chat_ids.insert_one({'tag': tag, 'chat_ids': tag_chat_ids})
+                db.hashtag_chat_ids.insert_one({'tag': tag,
+                                                'chat_ids': tag_chat_ids})
 
     db.chat_id_status.delete_one({'chat_id': str_chat_id})
 
@@ -78,17 +82,16 @@ def new_post(bot, msg, db):
     chat_id = msg.chat.id
     str_chat_id = str(chat_id)
 
-    print(msg.text)
-
     db.posts.delete_one({'chat_id': str_chat_id})
-    db.posts.insert_one({'chat_id': str_chat_id, 'username': msg.from_user.username,\
-        'text': msg.text + '\n\n' + '@' + msg.from_user.username,\
-        'status': 'writing', 'photos': [], 'mid': 0})
+    db.posts.insert_one({'chat_id': str_chat_id,
+                         'username': msg.from_user.username,
+                         'text': msg.text + '\n\n@' + msg.from_user.username,
+                         'status': 'writing', 'photos': [], 'mid': 0})
     bot.send_message(chat_id, messages.command_new_post_2)
 
     db.chat_id_status.delete_one({'chat_id': str_chat_id})
-    db.chat_id_status.insert_one({'chat_id': str_chat_id, 'status': 'add_photo'})
-
+    db.chat_id_status.insert_one({'chat_id': str_chat_id,
+                                  'status': 'add_photo'})
 
 
 def send_message_to_subscribers(bot, msg, pr_chat_id, db):
@@ -100,24 +103,25 @@ def send_message_to_subscribers(bot, msg, pr_chat_id, db):
         if tag in msg.text.lower():
             for chat_id in chat_ids:
                 if not chat_id in used.keys() and chat_id != pr_chat_id:
-                    bot.forward_message(chat_id, config.channel_name, msg.message_id)
+                    bot.forward_message(chat_id, config.channel_name,
+                                        msg.message_id)
                     used[chat_id] = 1
                     time.sleep(1)
 
 
 def send_global_post(bot, db):
-    #global global_post
     global_post_id = db.global_post.find_one({})['ID']
     global_post = db.posts.find_one({'_id': global_post_id})
-    print(global_post)
     str_chat_id = global_post['chat_id']
     chat_id = int(str_chat_id)
 
     keyboard = types.InlineKeyboardMarkup()
-    callback_button = types.InlineKeyboardButton(text="Активное", callback_data="active")
+    callback_button = types.InlineKeyboardButton(text="Активное",
+                                                 callback_data="active")
     keyboard.add(callback_button)
 
-    msg = bot.send_message(config.channel_name, global_post['text'], reply_markup=keyboard)
+    msg = bot.send_message(config.channel_name, global_post['text'],
+                           reply_markup=keyboard)
 
     db.posts.delete_one(global_post)
     global_post['status'] = 'active'
@@ -147,7 +151,3 @@ def delete_username(text):
         return
 
     return text[:i]
-
-
-
-

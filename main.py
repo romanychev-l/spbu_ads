@@ -20,8 +20,9 @@ from multiprocessing import Process
 
 mongo_pass = config.mongo_pass
 mongo_db = config.mongo_db
-link = 'mongodb+srv://{}:{}@cluster0-e2dix.mongodb.net/{}?\
-retryWrites=true&w=majority'.format("Leonid", mongo_pass, mongo_db)
+link = ('mongodb+srv://{}:{}@cluster0-e2dix.mongodb.net/{}?retryWrites=true&'
+        'w=majority')
+link = link.format("Leonid", mongo_pass, mongo_db)
 
 client = MongoClient(link, connect=False)
 db = client[config.mongo_db_name]
@@ -69,29 +70,36 @@ def main_logic(msg):
     hl.main_logic(bot, msg, db)
 
 
-def process_while():
-    SINGLE_RUN = 0
+def build_logger():
     logging.getLogger('requests').setLevel(logging.CRITICAL)
-    logging.basicConfig(format='[%(asctime)s] %(filename)s:%(lineno)d %(levelname)s - %(message)s', level=logging.INFO, filename='bot_log.log', datefmt='%d.%m.%Y %H:%M:%S')
-    if not SINGLE_RUN:
-        while True:
-            print("news")
-            vk.check_new_posts_vk(bot, db)
-            logging.info('[App] Script went to sleep.')
-            time.sleep(60)
-    else:
+    formatter = ('[%(asctime)s] (%(filename)s).%(funcName)s:%(lineno)d '
+                 '%(levelname)s - %(message)s')
+    logging.basicConfig(format=formatter, level=logging.INFO,
+                        filename='bot_log.log', datefmt='%d.%m.%Y %H:%M:%S')
+
+
+def vk_parsing():
+    while True:
         vk.check_new_posts_vk(bot, db)
-    logging.info('[App] Script exited.\n')
+        time.sleep(60)
 
 
-if __name__ == '__main__':
+def main():
+    build_logger()
+    logging.info('[App] Script start.')
+
     #while True:
     try:
-        proc2 = Process(target=process_while)
+        proc2 = Process(target=vk_parsing)
         proc2.start()
 
         bot.polling(none_stop=True)
     except Exception as e:
         print(e.__class__)
 
-    print('end')
+    logging.info('[App] Script exited.\n')
+
+
+
+if __name__ == '__main__':
+    main()
