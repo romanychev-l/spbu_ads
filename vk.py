@@ -120,7 +120,7 @@ def send_new_posts(bot, items, last_id, db):
                     if not chat_id in used.keys():
                         try:
                             bot.forward_message(
-                                int(chat_id), config.channel_name,
+                                chat_id, config.channel_name,
                                 msg_in_chat.message_id
                                 )
                             used[chat_id] = 1

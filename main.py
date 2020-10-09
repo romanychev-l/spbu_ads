@@ -100,6 +100,5 @@ def main():
     logging.info('[App] Script exited.\n')
 
 
-
 if __name__ == '__main__':
     main()
