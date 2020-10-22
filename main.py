@@ -1,7 +1,7 @@
 import config
 import messages
-import telebot
-from telebot import types
+#import telebot
+#from telebot import types
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -9,7 +9,7 @@ import eventlet
 import logging
 from time import sleep
 import json
-from telebot.types import InputMediaPhoto
+#from telebot.types import InputMediaPhoto
 import pymongo
 from pymongo import MongoClient
 import pprint
@@ -17,6 +17,8 @@ import handlers as hl
 import vk
 from multiprocessing import Process
 
+from aiogram import Bot, Dispatcher, executor, types
+import asyncio
 
 mongo_pass = config.mongo_pass
 mongo_db = config.mongo_db
@@ -27,47 +29,49 @@ link = link.format("Leonid", mongo_pass, mongo_db)
 client = MongoClient(link, connect=False)
 db = client[config.mongo_db_name]
 
-bot = telebot.TeleBot(config.token)
+#bot = telebot.TeleBot(config.token)
+bot = Bot(token=config.token)
+dp = Dispatcher(bot)
 
 
-@bot.message_handler(commands=['start'])
-def start(msg):
-    hl.start(bot, msg)
+@dp.message_handler(commands=['start'])
+async def start(msg):
+    await hl.start(bot, msg)
 
 
-@bot.message_handler(commands=['add_tags'])
-def _add_tags(msg):
-    hl._add_tags(bot, msg, db)
+@dp.message_handler(commands=['add_tags'])
+async def _add_tags(msg):
+    await hl._add_tags(bot, msg, db)
 
 
-@bot.message_handler(commands=['del_tags'])
-def _del_tags(msg):
-    hl._del_tags(bot, msg, db)
+@dp.message_handler(commands=['del_tags'])
+async def _del_tags(msg):
+    await hl._del_tags(bot, msg, db)
 
 
-@bot.message_handler(commands=['show_tags'])
-def _show_tags(msg):
-    hl._show_tags(bot, msg, db)
+@dp.message_handler(commands=['show_tags'])
+async def _show_tags(msg):
+    await hl._show_tags(bot, msg, db)
 
 
-@bot.message_handler(commands=['new_post'])
-def _new_post(msg):
-    hl._new_post(bot, msg, db)
+@dp.message_handler(commands=['new_post'])
+async def _new_post(msg):
+    await hl._new_post(bot, msg, db)
 
 
-@bot.message_handler(content_types=["photo"])
-def add_photos(msg):
-    hl.add_photos(bot, msg, db)
+@dp.message_handler(content_types=["photo"])
+async def add_photos(msg):
+    await hl.add_photos(bot, msg, db)
 
 
-@bot.callback_query_handler(func=lambda call: True)
-def callback_inline(call):
-    hl.callback_inline(bot, call, db)
+@dp.callback_query_handler(lambda call: True)
+async def callback_inline(call):
+    await hl.callback_inline(bot, call, db)
 
 
-@bot.message_handler(content_types=["text"])
-def main_logic(msg):
-    hl.main_logic(bot, msg, db)
+@dp.message_handler(content_types=["text"])
+async def main_logic(msg):
+    await hl.main_logic(bot, msg, db)
 
 
 def build_logger():
@@ -78,11 +82,13 @@ def build_logger():
                         filename='bot_log.log', datefmt='%d.%m.%Y %H:%M:%S')
 
 
-def vk_parsing():
+async def vk_parsing():
     while True:
-        vk.check_new_posts_vk(bot, db)
-        time.sleep(60)
-
+        print("in")
+        await vk.check_new_posts_vk(bot, db)
+        print("time")
+        await asyncio.sleep(5)
+        print('out')
 
 def main():
     build_logger()
@@ -90,10 +96,14 @@ def main():
 
     #while True:
     try:
-        proc2 = Process(target=vk_parsing)
-        proc2.start()
+        #proc2 = Process(target=vk_parsing)
+        #proc2.start()
+        loop = asyncio.get_event_loop()
+        asyncio.ensure_future(vk_parsing())
+        asyncio.ensure_future(executor.start_polling(dp, skip_updates=True))
 
-        bot.polling(none_stop=True)
+        loop.run_forever()
+        print('start_pol')
     except Exception as e:
         print(e.__class__)
 
