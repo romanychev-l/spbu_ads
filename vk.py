@@ -1,6 +1,6 @@
 import config
 import messages
-import telebot
+#import telebot
 #from telebot import types
 import requests
 from bs4 import BeautifulSoup
