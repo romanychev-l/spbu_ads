@@ -4,6 +4,7 @@ command_start = (
     '/del_tags - удалить тэги\n'
     '/show_tags - показать мои теги\n'
     '/new_post - создать новый пост\n'
+    '/feedback - обратная связь\n'
 )
 
 
@@ -64,3 +65,7 @@ error_status = (
 add_success = 'Теги успешно добавлены!'
 
 del_success = 'Теги успешно удалены!'
+
+feedback = 'Отправьте мне свой отзыв, а я передам его хозяину.'
+feedback_ans = 'Пришел новый отзыв:'
+feedback_good = 'Спасибо за отзыв!'
