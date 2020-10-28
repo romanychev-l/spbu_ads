@@ -1,7 +1,5 @@
 import config
 import messages
-#import telebot
-#from telebot import types
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -9,12 +7,12 @@ import eventlet
 import logging
 from time import sleep
 import json
-#from telebot.types import InputMediaPhoto
 import pymongo
 
 from aiogram import Bot, Dispatcher, executor, types
 import asyncio
 from aiogram.types import ParseMode, InputMediaPhoto, InputMediaVideo, ChatActions
+
 
 def get_data():
     timeout = eventlet.Timeout(10)
@@ -85,20 +83,17 @@ async def send_new_posts(bot, items, last_id, db):
             config.channel_name, msg, parse_mode='MARKDOWN',
             disable_web_page_preview=True
             )
-        print(msg_in_chat)
 
         if 'attachments' in item.keys():
             media = item['attachments']
             photos = []
             one_url = ''
             for it in media:
-                print("33")
                 if it['type'] == 'photo':
                     sizes = it['photo']['sizes']
                     max_height = 0
                     max_url = ''
                     for photo in sizes:
-                        print(photo)
                         height = int(photo['height'])
                         url = photo['url']
                         if height > max_height:
@@ -106,7 +101,6 @@ async def send_new_posts(bot, items, last_id, db):
                             max_url = url
                     one_url = max_url
                     photos.append(InputMediaPhoto(max_url))
-            print("photos")
             if len(photos) > 1:
                 await bot.send_media_group(config.channel_name, photos)
             elif len(photos) == 1:

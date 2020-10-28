@@ -1,8 +1,6 @@
 import config
 import messages
-#from telebot import types
 import pymongo
-#from telebot.types import InputMediaPhoto
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -12,12 +10,12 @@ from time import sleep
 import json
 import pprint
 
-
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 import asyncio
+
 
 def add_tags(msg, db):
     chat_id = msg.chat.id

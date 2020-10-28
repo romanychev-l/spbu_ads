@@ -1,11 +1,10 @@
 import config
 import messages
 import function as fun
-#from telebot import types
-#from telebot.types import InputMediaPhoto
 import pymongo
 
 from aiogram import Bot, Dispatcher, executor, types
+
 
 async def start(bot, msg):
     chat_id = msg.chat.id

@@ -1,7 +1,5 @@
 import config
 import messages
-#import telebot
-#from telebot import types
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -9,7 +7,6 @@ import eventlet
 import logging
 from time import sleep
 import json
-#from telebot.types import InputMediaPhoto
 import pymongo
 from pymongo import MongoClient
 import pprint
@@ -41,33 +38,23 @@ link = link.format("Leonid", mongo_pass, mongo_db)
 client = MongoClient(link, connect=False)
 db = client[config.mongo_db_name]
 
-#bot = telebot.TeleBot(config.token)
 bot = Bot(token=config.token)
 dp = Dispatcher(bot)
 #dp.middleware.setup(LoggingMiddleware())
+
 
 async def on_startup(dp):
     await bot.set_webhook(WEBHOOK_URL)
 
 async def on_shutdown(dp):
     #logging.warning('Shutting down..')
-
-    # insert code here to run it before shutdown
-
-    # Remove webhook (not acceptable in some cases)
     await bot.delete_webhook()
-
-    # Close DB connection (if used)
-    await dp.storage.close()
-    await dp.storage.wait_closed()
-
     #logging.warning('Bye!')
 
 
 @dp.message_handler(commands=['start'])
 async def start(msg):
     await hl.start(bot, msg)
-    #return SendMessage(message.chat.id, message.text)
 
 
 @dp.message_handler(commands=['add_tags'])
@@ -115,13 +102,9 @@ def build_logger():
 
 async def vk_parsing():
     while True:
-        #root.update()
-        print("in")
         await vk.check_new_posts_vk(bot, db)
-        #asyncio.create_task(vk.checking_new_posts_vk(bot, db))
-        print("time")
-        await asyncio.sleep(5)
-        print('out')
+        await asyncio.sleep(30)
+
 
 def main():
     build_logger()
@@ -129,17 +112,22 @@ def main():
 
     #while True:
     try:
-        #proc2 = Process(target=vk_parsing)
-        #proc2.start()
-        #loop = asyncio.get_event_loop()
-        #asyncio.ensure_future(vk_parsing())
-        #asyncio.ensure_future(executor.start_polling(dp, skip_updates=True))
-        #vk_parsing()
-        #loop.run_forever()
-        asyncio.get_event_loop().run_until_complete(vk_parsing())
-        #dp.loop.create_task(vk_parsing())
-        #await vk_parsing()
-        print('start_pol')
+        loop = asyncio.get_event_loop()
+        task = [
+            loop.create_task(vk_parsing()),
+            loop.create_task(start_webhook(
+                dispatcher=dp,
+                webhook_path=WEBHOOK_PATH,
+                on_startup=on_startup,
+                on_shutdown=on_shutdown,
+                skip_updates=True,
+                host=WEBAPP_HOST,
+                port=WEBAPP_PORT,
+            ))
+        ]
+        wait_tasks = asyncio.wait(tasks)
+        loop.run_until_complete(wait_tasks)
+        loop.close()
     except Exception as e:
         print(e.__class__)
 
@@ -147,16 +135,4 @@ def main():
 
 
 if __name__ == '__main__':
-    start_webhook(
-        dispatcher=dp,
-        webhook_path=WEBHOOK_PATH,
-        on_startup=on_startup,
-        on_shutdown=on_shutdown,
-        skip_updates=True,
-        host=WEBAPP_HOST,
-        port=WEBAPP_PORT,
-    )
-    #acyncio.run(main())
     main()
-    #loop = asyncio.get_event_loop()
-    #loop.run_until_complete(main())
