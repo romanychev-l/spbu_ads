@@ -11,6 +11,13 @@ async def start(bot, msg):
     await bot.send_message(chat_id, messages.command_start)
 
 
+async def feedback(bot, msg, db):
+    chat_id = msg.chat.id
+    db.chat_id_status.delete_one({'chat_id': chat_id})
+    db.chat_id_status.insert_one({'chat_id': chat_id, 'status': 'feedback'})
+    await bot.send_message(chat_id, messages.feedback)
+
+
 async def _add_tags(bot, msg, db):
     chat_id = msg.chat.id
     db.chat_id_status.delete_one({'chat_id': chat_id})
@@ -151,7 +158,11 @@ async def main_logic(bot, msg, db):
         await bot.send_message(chat_id, messages.add_success)
     elif status == 'del':
         fun.del_tags(msg, db)
-        await  bot.send_message(chat_id, messages.del_success)
+        await bot.send_message(chat_id, messages.del_success)
+    elif status == 'feedback':
+        await bot.send_message(config.my_chat_id, messages.feedback_ans + '\n' + msg.text)
+        await bot.send_message(chat_id, messages.feedback_good)
+        db.chat_id_status.delete_one({'chat_id': chat_id})
     elif status == 'new_post':
         await fun.new_post(bot, msg, db)
     elif status == 'add_photo':

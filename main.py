@@ -46,6 +46,7 @@ dp = Dispatcher(bot)
 async def on_startup(dp):
     await bot.set_webhook(WEBHOOK_URL)
 
+
 async def on_shutdown(dp):
     #logging.warning('Shutting down..')
     await bot.delete_webhook()
@@ -55,6 +56,11 @@ async def on_shutdown(dp):
 @dp.message_handler(commands=['start'])
 async def start(msg):
     await hl.start(bot, msg)
+
+
+@dp.message_handler(commands=['feedback'])
+async def feedback(msg):
+    await hl.feedback(bot, msg, db)
 
 
 @dp.message_handler(commands=['add_tags'])
