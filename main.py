@@ -20,12 +20,12 @@ from aiogram.utils.executor import start_webhook
 
 # webhook settings
 WEBHOOK_HOST = 'https://romanychev.online'
-WEBHOOK_PATH = '/'
+WEBHOOK_PATH = config.path
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 
 # webserver settings
 WEBAPP_HOST = '127.0.0.1'  # or ip
-WEBAPP_PORT = 5000
+WEBAPP_PORT = config.port
 
 #logging.basicConfig(level=logging.INFO)
 
