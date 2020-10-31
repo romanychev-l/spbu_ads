@@ -2,13 +2,28 @@ import config
 import messages
 import function as fun
 import pymongo
+import keyboard_w
 
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import ReplyKeyboardRemove, \
+    ReplyKeyboardMarkup, KeyboardButton, \
+    InlineKeyboardMarkup, InlineKeyboardButton
+
+
+but1 = KeyboardButton(keyboard_w.create)
+but2 = KeyboardButton(keyboard_w.follow)
+but3 = KeyboardButton(keyboard_w.unfollow)
+but4 = KeyboardButton(keyboard_w.show)
+but5 = KeyboardButton(keyboard_w.feedback)
+
+key_b = ReplyKeyboardMarkup(
+    resize_keyboard=True, one_time_keyboard=True
+).add(but1).add(but2).add(but3).add(but4).add(but5)
 
 
 async def start(bot, msg):
     chat_id = msg.chat.id
-    await bot.send_message(chat_id, messages.command_start)
+    await bot.send_message(chat_id, messages.command_start, reply_markup=key_b)
 
 
 async def feedback(bot, msg, db):
@@ -39,10 +54,10 @@ async def _show_tags(bot, msg, db):
     tags = db.chat_id_hashtags.find_one({'chat_id': chat_id})
 
     if tags == None:
-        await bot.send_message(chat_id, messages.command_show_tags_1)
+        await bot.send_message(chat_id, messages.command_show_tags_1, reply_markup=key_b)
     else:
         tags = tags['tags']
-        await bot.send_message(chat_id, messages.command_show_tags_2 + ' '.join(tags))
+        await bot.send_message(chat_id, messages.command_show_tags_2 + ' '.join(tags), reply_markup=key_b)
 
 
 async def _new_post(bot, msg, db):
@@ -146,6 +161,22 @@ async def main_logic(bot, msg, db):
             await bot.send_message(chat_id_from, messages.nok + msg.text[4:])
             db.global_post.remove({})
 
+    if msg.text == keyboard_w.create:
+        await _new_post(bot, msg, db)
+        return
+    elif msg.text == keyboard_w.follow:
+        await _add_tags(bot, msg, db)
+        return
+    elif msg.text == keyboard_w.unfollow:
+        await _del_tags(bot, msg, db)
+        return
+    elif msg.text == keyboard_w.show:
+        await _show_tags(bot, msg, db)
+        return
+    elif msg.text == keyboard_w.feedback:
+        await feedback(bot, msg, db)
+        return
+
     status = db.chat_id_status.find_one({'chat_id': chat_id})
     if status == None:
         await bot.send_message(chat_id, messages.main_logic_2)
@@ -155,13 +186,13 @@ async def main_logic(bot, msg, db):
 
     if status == 'add':
         fun.add_tags(msg, db)
-        await bot.send_message(chat_id, messages.add_success)
+        await bot.send_message(chat_id, messages.add_success, reply_markup=key_b)
     elif status == 'del':
         fun.del_tags(msg, db)
-        await bot.send_message(chat_id, messages.del_success)
+        await bot.send_message(chat_id, messages.del_success, reply_markup=key_b)
     elif status == 'feedback':
         await bot.send_message(config.my_chat_id, messages.feedback_ans + '\n' + msg.text)
-        await bot.send_message(chat_id, messages.feedback_good)
+        await bot.send_message(chat_id, messages.feedback_good, reply_markup=key_b)
         db.chat_id_status.delete_one({'chat_id': chat_id})
     elif status == 'new_post':
         await fun.new_post(bot, msg, db)
@@ -179,5 +210,5 @@ async def main_logic(bot, msg, db):
                             {'$set':{'status': 'checking'}})
 
         await bot.send_message(chat_id, messages.post_create)
-        await bot.send_message(config.my_chat_id, messages.new_post_checking)
+        await bot.send_message(config.my_chat_id, messages.new_post_checking, reply_markup=key_b)
         db.chat_id_status.delete_one({'chat_id': chat_id})
