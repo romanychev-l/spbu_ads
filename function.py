@@ -9,6 +9,7 @@ import logging
 from time import sleep
 import json
 import pprint
+import keyboard_w
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ReplyKeyboardRemove, \
@@ -83,12 +84,17 @@ def del_tags(msg, db):
 async def new_post(bot, msg, db):
     chat_id = msg.chat.id
 
+    but1 = KeyboardButton(keyboard_w.finish)
+    key_b = ReplyKeyboardMarkup(
+        resize_keyboard=True, one_time_keyboard=True
+    ).add(but1)
+
     db.posts.delete_one({'chat_id': chat_id})
     db.posts.insert_one({'chat_id': chat_id,
                          'username': msg.from_user.username,
                          'text': msg.text + '\n\n@' + msg.from_user.username,
                          'status': 'writing', 'photos': [], 'mid': 0})
-    await bot.send_message(chat_id, messages.command_new_post_2)
+    await bot.send_message(chat_id, messages.command_new_post_2, reply_markup=key_b)
 
     db.chat_id_status.update_one({'chat_id': chat_id},
                                  {"$set": {'status': 'add_photo'}})
@@ -114,13 +120,12 @@ async def send_global_post(bot, db):
     global_post = db.posts.find_one({'_id': global_post_id})
     chat_id = global_post['chat_id']
 
-    keyboard = types.InlineKeyboardMarkup()
-    callback_button = types.InlineKeyboardButton(text="Активное",
-                                                 callback_data="active")
+    keyboard = InlineKeyboardMarkup()
+    callback_button = InlineKeyboardButton(text="Активное",
+                                           callback_data="active")
     keyboard.add(callback_button)
-
     msg = await bot.send_message(config.channel_name, global_post['text'],
-                           reply_markup=keyboard)
+                                 reply_markup=keyboard)
 
     db.posts.delete_one(global_post)
     global_post['status'] = 'active'
