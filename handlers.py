@@ -21,13 +21,24 @@ key_b = ReplyKeyboardMarkup(
 ).add(but1).add(but2).add(but3).add(but4).add(but5)
 
 
+async def check(bot, chat_id):
+    user = await bot.get_chat_member(config.channel_name, chat_id)
+    if user == None or user.status == 'left' or user.status == 'kicked':
+        await bot.send_message(chat_id, messages.follow)
+        return 1
+
+
 async def start(bot, msg):
     chat_id = msg.chat.id
+    if await check(bot, chat_id): return
+
     await bot.send_message(chat_id, messages.command_start, reply_markup=key_b)
 
 
 async def feedback(bot, msg, db):
     chat_id = msg.chat.id
+    if await check(bot, chat_id): return
+
     db.chat_id_status.delete_one({'chat_id': chat_id})
     db.chat_id_status.insert_one({'chat_id': chat_id, 'status': 'feedback'})
     await bot.send_message(chat_id, messages.feedback)
@@ -35,6 +46,8 @@ async def feedback(bot, msg, db):
 
 async def _add_tags(bot, msg, db):
     chat_id = msg.chat.id
+    if await check(bot, chat_id): return
+
     db.chat_id_status.delete_one({'chat_id': chat_id})
     db.chat_id_status.insert_one({'chat_id': chat_id, 'status': 'add'})
     await bot.send_message(chat_id, messages.command_add)
@@ -42,6 +55,8 @@ async def _add_tags(bot, msg, db):
 
 async def _del_tags(bot, msg, db):
     chat_id = msg.chat.id
+    if await check(bot, chat_id): return
+
     db.chat_id_status.delete_one({'chat_id': chat_id})
     db.chat_id_status.insert_one({'chat_id': chat_id, 'status': 'del'})
     await bot.send_message(chat_id, messages.command_del)
@@ -49,6 +64,8 @@ async def _del_tags(bot, msg, db):
 
 async def _show_tags(bot, msg, db):
     chat_id = msg.chat.id
+    if await check(bot, chat_id): return
+
     db.chat_id_status.delete_one({'chat_id': chat_id})
 
     tags = db.chat_id_hashtags.find_one({'chat_id': chat_id})
@@ -62,6 +79,8 @@ async def _show_tags(bot, msg, db):
 
 async def _new_post(bot, msg, db):
     chat_id = msg.chat.id
+    if await check(bot, chat_id): return
+
     if msg.from_user.username == None:
         await bot.send_message(chat_id, messages.not_username)
         return
@@ -73,6 +92,7 @@ async def _new_post(bot, msg, db):
 
 async def add_photos(bot, msg, db):
     chat_id = msg.chat.id
+    if await check(bot, chat_id): return
 
     status = db.chat_id_status.find_one({'chat_id': chat_id})
     if status == None or status['status'] != 'add_photo':
@@ -119,6 +139,7 @@ async def callback_inline(bot, call, db):
 
 async def main_logic(bot, msg, db):
     chat_id = msg.chat.id
+    if await check(bot, chat_id): return
 
     username = msg.from_user.username
     if username == 'romanychev':
