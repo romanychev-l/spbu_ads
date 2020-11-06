@@ -101,11 +101,13 @@ async def send_new_posts(bot, items, last_id, db):
                             max_url = url
                     one_url = max_url
                     photos.append(InputMediaPhoto(max_url))
-            if len(photos) > 1:
-                await bot.send_media_group(config.channel_name, photos)
-            elif len(photos) == 1:
-                await bot.send_photo(config.channel_name, one_url)
-
+            try:
+                if len(photos) > 1:
+                    await bot.send_media_group(config.channel_name, photos)
+                elif len(photos) == 1:
+                    await bot.send_photo(config.channel_name, one_url)
+            except Exception as ex:
+                print(ex.__class__)
             await asyncio.sleep(len(photos))
 
         save_last_index(item['id'])
