@@ -2,3 +2,5 @@ config.py
 bot_log.log
 last_known_id.txt
 __pycache__/
+test.py
+prod.py
