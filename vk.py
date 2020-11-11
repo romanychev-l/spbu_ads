@@ -11,8 +11,8 @@ import pymongo
 
 from aiogram import Bot, Dispatcher, executor, types
 import asyncio
-from aiogram.types import ParseMode, InputMediaPhoto, InputMediaVideo, ChatActions
-
+from aiogram.types import ParseMode, InputMediaPhoto
+from aiogram.utils import markdown
 
 def get_data():
     timeout = eventlet.Timeout(10)
@@ -74,15 +74,21 @@ async def send_new_posts(bot, items, last_id, db):
         if 'signer_id' in item.keys():
             link_autor = 'vk.com/id' + str(item['signer_id'])
 
-            msg = (msg + '\n\n[Автор]({})'.format(link_autor) +
-                   '\n[Ссылка на пост]({})'.format(link_post))
+            msg = msg + '\n\n' + markdown.link('Автор', link_autor) + '\n' +\
+                markdown.link('Ссылка на пост', link_post)
         else:
-            msg = msg + '\n\n[Ссылка на пост]({})'.format(link_post)
+            msg = msg + '\n\n' + markdown.link('Ссылка на пост', link_post)
 
-        msg_in_chat = await bot.send_message(
-            config.channel_name, msg, parse_mode='MARKDOWN',
-            disable_web_page_preview=True
+        msg_in_chat = 0
+        msg_in_chat_capt = 0
+        capt = 0
+        if len(msg) > 1023:
+            msg_in_chat_capt = await bot.send_message(
+                config.channel_name,
+                msg,
+                parse_mode=ParseMode.MARKDOWN
             )
+            capt = 1
 
         if 'attachments' in item.keys():
             media = item['attachments']
@@ -100,37 +106,76 @@ async def send_new_posts(bot, items, last_id, db):
                             max_height = height
                             max_url = url
                     one_url = max_url
-                    photos.append(InputMediaPhoto(max_url))
-            try:
-                if len(photos) > 1:
-                    await bot.send_media_group(config.channel_name, photos)
-                elif len(photos) == 1:
-                    await bot.send_photo(config.channel_name, one_url)
-            except Exception as ex:
-                print(ex.__class__)
-            await asyncio.sleep(len(photos))
+                    if len(photos) == 0 and capt == 0:
+                        photos.append(InputMediaPhoto(
+                            max_url,
+                            caption=msg,
+                            parse_mode=ParseMode.MARKDOWN
+                        ))
+                    else:
+                        photos.append(InputMediaPhoto(max_url))
+            flag = 1
+            while flag:
+                try:
+                    if len(photos) > 1:
+                        msg_in_chat = await bot.send_media_group(
+                            config.channel_name,
+                            photos
+                        )
+                    elif capt == 0 and len(photos) == 1:
+                        msg_in_chat = await bot.send_photo(
+                            config.channel_name,
+                            one_url,
+                            caption=msg,
+                            parse_mode=ParseMode.MARKDOWN
+                        )
+                    else:
+                        msg_in_chat = await bot.send_photo(
+                            config.channel_name,
+                            one_url,
+                        )
+                    await asyncio.sleep(len(photos))
+                    flag = 0
+                except Exception as ex:
+                    print(str(ex))
+                    await asyncio.sleep(5)
+        elif capt == 0:
+            msg_in_chat = await bot.send_message(
+                config.channel_name, msg, parse_mode='MARKDOWN',
+                disable_web_page_preview=True
+            )
+
+        if capt:
+            msg_in_chat = msg_in_chat_capt
 
         save_last_index(item['id'])
         await asyncio.sleep(2)
 
+        if type(msg_in_chat) == list:
+            msg_in_chat = msg_in_chat[0]
+
         msg_id = msg_in_chat.message_id
         used = {}
-        for doc in db.hashtag_chat_ids.find():
-            tag = doc['tag']
-            chat_ids = doc['chat_ids']
-            if tag in msg_in_chat.text.lower():
-                for chat_id in chat_ids:
-                    if not chat_id in used.keys():
-                        try:
-                            await bot.forward_message(
-                                chat_id, config.channel_name,
-                                msg_in_chat.message_id
+        try:
+            for doc in db.hashtag_chat_ids.find():
+                tag = doc['tag']
+                chat_ids = doc['chat_ids']
+                if tag in msg.lower():
+                    for chat_id in chat_ids:
+                        if not chat_id in used.keys():
+                            try:
+                                await bot.forward_message(
+                                    chat_id=chat_id,
+                                    from_chat_id=config.channel_name,
+                                    message_id=msg_in_chat.message_id
                                 )
-                            used[chat_id] = 1
-                            await asyncio.sleep(2)
-                        except Exception as ex:
-                            logging.info('Forward message faild')
-                            delete_chat_id(chat_id, db)
+                                used[chat_id] = 1
+                                await asyncio.sleep(2)
+                            except Exception as ex:
+                                logging.info('Forward message faild')
+                                delete_chat_id(chat_id, db)
+        except Exception as ex:
+            print(ex)
     return
 
 
