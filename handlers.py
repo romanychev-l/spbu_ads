@@ -230,6 +230,6 @@ async def main_logic(bot, msg, db):
         db.posts.update_one({'chat_id': chat_id},
                             {'$set':{'status': 'checking'}})
 
-        await bot.send_message(chat_id, messages.post_create)
+        await bot.send_message(chat_id, messages.post_create, reply_markup=key_b)
         await bot.send_message(config.my_chat_id, messages.new_post_checking, reply_markup=key_b)
         db.chat_id_status.delete_one({'chat_id': chat_id})
