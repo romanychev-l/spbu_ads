@@ -138,6 +138,7 @@ async def send_new_posts(bot, items, last_id, db):
                     flag = 0
                 except Exception as ex:
                     print(str(ex))
+                    await bot.send_message(config.my_chat_id, str(ex))
                     await asyncio.sleep(5)
         elif capt == 0:
             msg_in_chat = await bot.send_message(
