@@ -58,31 +58,6 @@ async def start(msg):
     await hl.start(bot, msg)
 
 
-@dp.message_handler(commands=['feedback'])
-async def feedback(msg):
-    await hl.feedback(bot, msg, db)
-
-
-@dp.message_handler(commands=['add_tags'])
-async def _add_tags(msg):
-    await hl._add_tags(bot, msg, db)
-
-
-@dp.message_handler(commands=['del_tags'])
-async def _del_tags(msg):
-    await hl._del_tags(bot, msg, db)
-
-
-@dp.message_handler(commands=['show_tags'])
-async def _show_tags(msg):
-    await hl._show_tags(bot, msg, db)
-
-
-@dp.message_handler(commands=['new_post'])
-async def _new_post(msg):
-    await hl._new_post(bot, msg, db)
-
-
 @dp.message_handler(content_types=["photo"])
 async def add_photos(msg):
     await hl.add_photos(bot, msg, db)
@@ -122,6 +97,7 @@ def main():
         task = [
             loop.create_task(vk_parsing()),
             loop.create_task(start_webhook(
+        #start_webhook(
                 dispatcher=dp,
                 webhook_path=WEBHOOK_PATH,
                 on_startup=on_startup,
@@ -130,10 +106,12 @@ def main():
                 host=WEBAPP_HOST,
                 port=WEBAPP_PORT,
             ))
+
         ]
         wait_tasks = asyncio.wait(tasks)
         loop.run_until_complete(wait_tasks)
         loop.close()
+
     except Exception as e:
         print(e.__class__)
 

@@ -59,7 +59,6 @@ def delete_chat_id(chat_id, db):
 
 
 async def send_new_posts(bot, items, last_id, db):
-    print("OK")
     items = items[::-1]
 
     for item in items:
