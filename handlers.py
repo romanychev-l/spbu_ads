@@ -434,7 +434,7 @@ async def main_logic(bot, msg, db):
     elif gstatus == 'feedback':
         await bot.send_message(
             config.my_chat_id,
-            messages.feedback_ans + '\n' + msg.text
+            messages.feedback_ans + '\n' + msg.text + '\n@' + msg['from']['username']
         )
         await bot.send_message(
             chat_id,

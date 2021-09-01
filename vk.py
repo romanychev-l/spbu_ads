@@ -59,12 +59,12 @@ def delete_chat_id(chat_id, db):
 
 
 async def send_new_posts(bot, items, last_id, db):
+    print("OK")
     items = items[::-1]
 
     for item in items:
         if int(item['id']) <= last_id:
             continue
-
         msg = (item['text'].replace('@spbu_advert', '')
                .replace('_', '\_').replace('*', '\*'))
         link_post = 'vk.com/wall-50260527_' + str(item['id'])
@@ -78,6 +78,7 @@ async def send_new_posts(bot, items, last_id, db):
         else:
             msg = msg + '\n\n' + markdown.link('Ссылка на пост', link_post)
 
+        print(msg[:10])
         msg_in_chat = 0
         msg_in_chat_capt = 0
         capt = 0
@@ -88,11 +89,14 @@ async def send_new_posts(bot, items, last_id, db):
                 parse_mode=ParseMode.MARKDOWN
             )
             capt = 1
-
+        flag = 0
+        photos = []
+        one_url = ''
         if 'attachments' in item.keys():
             media = item['attachments']
-            photos = []
-            one_url = ''
+            #photos = []
+            #one_url = ''
+            print("O")
             for it in media:
                 if it['type'] == 'photo':
                     sizes = it['photo']['sizes']
@@ -113,33 +117,41 @@ async def send_new_posts(bot, items, last_id, db):
                         ))
                     else:
                         photos.append(InputMediaPhoto(max_url))
-            flag = 1
-            while flag:
-                try:
-                    if len(photos) > 1:
-                        msg_in_chat = await bot.send_media_group(
-                            config.channel_name,
-                            photos
-                        )
-                    elif capt == 0 and len(photos) == 1:
-                        msg_in_chat = await bot.send_photo(
-                            config.channel_name,
-                            one_url,
-                            caption=msg,
-                            parse_mode=ParseMode.MARKDOWN
-                        )
-                    else:
-                        msg_in_chat = await bot.send_photo(
-                            config.channel_name,
-                            one_url,
-                        )
-                    await asyncio.sleep(len(photos))
-                    flag = 0
-                except Exception as ex:
-                    print(str(ex))
+        print(len(photos))
+        try_number = 0
+        while flag == 0:
+            if len(photos) == 0:
+                break
+            try:
+                if len(photos) > 1:
+                    msg_in_chat = await bot.send_media_group(
+                        config.channel_name,
+                        photos
+                    )
+                elif capt == 0 and len(photos) == 1:
+                    msg_in_chat = await bot.send_photo(
+                        config.channel_name,
+                        one_url,
+                        caption=msg,
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                else:
+                    msg_in_chat = await bot.send_photo(
+                        config.channel_name,
+                        one_url,
+                    )
+                await asyncio.sleep(len(photos))
+                flag = 1
+            except Exception as ex:
+                print(str(ex))
+                try_number += 1
+                if try_number > 25:
+                    await bot.send_message(config.my_chat_id, 'Published')
+                else:
                     await bot.send_message(config.my_chat_id, str(ex))
-                    await asyncio.sleep(5)
-        elif capt == 0:
+                await asyncio.sleep(5)
+
+        if flag == 0 and capt == 0:
             msg_in_chat = await bot.send_message(
                 config.channel_name, msg, parse_mode='MARKDOWN',
                 disable_web_page_preview=True
