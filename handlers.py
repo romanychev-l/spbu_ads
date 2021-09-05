@@ -3,6 +3,8 @@ import messages
 import function as fun
 import pymongo
 import keyboard_w
+import re
+import json
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ReplyKeyboardRemove, \
@@ -15,10 +17,11 @@ but0 = KeyboardButton(keyboard_w.fast_ads)
 but1 = KeyboardButton(keyboard_w.announcements)
 but2 = KeyboardButton(keyboard_w.tags)
 but3 = KeyboardButton(keyboard_w.feedback)
+but8 = KeyboardButton(keyboard_w.guide)
 
 global_key = ReplyKeyboardMarkup(
     resize_keyboard=True, one_time_keyboard=True
-).add(but0).add(but1).add(but2).add(but3)
+).add(but8).add(but0).add(but1).add(but2).add(but3)
 
 but4 = KeyboardButton(keyboard_w.create)
 
@@ -37,6 +40,13 @@ but7 = KeyboardButton(keyboard_w.show)
 tags_key = ReplyKeyboardMarkup(
     resize_keyboard=True, one_time_keyboard=True
 ).add(but5).add(but6).add(but7)
+
+
+with open('keyboards.json', 'r') as file:
+	keyboards = json.loads(file.read())
+
+with open('answers.json', 'r') as file:
+	answers = json.loads(file.read())
 
 
 async def check(bot, chat_id):
@@ -390,6 +400,33 @@ async def global_ads(bot, msg, db):
         db.chat_id_status.delete_one({'chat_id': chat_id})
 
 
+async def keyboard(key):
+	x = ReplyKeyboardMarkup(resize_keyboard=True)
+	for j in key:
+		x.add(*[KeyboardButton(i) for i in j])
+	return x
+
+
+async def guide(bot, msg, db):
+    user = msg.chat.id
+    mes = msg.text.lower().strip()
+
+    f = True
+    for req in answers:
+        if mes in req['questions']:
+            f = False
+            if req['answer']:
+                for i in re.findall(r'\[\w+\|[\w ]+\]', req['answer']):
+                    name = i.split('|')[1][:-1]
+                    src = i.split('|')[0][1:]
+                    req['answer'] = req['answer'].replace(i, name + ' (vk.com/' + src + ')')
+                await bot.send_message(user, req['answer'], reply_markup=await keyboard(keyboards[req['keyboard']-1]) if req['keyboard'] else None)
+
+            for i in req['attachments']:
+                with open('attachments/' + i + '.png', 'rb') as file:
+                    await bot.send_photo(user, file)
+
+
 async def set_global_status(chat_id, status, db):
     db.global_status.delete_one({'chat_id': chat_id})
     db.global_status.insert_one({'chat_id': chat_id, 'status': status})
@@ -401,12 +438,12 @@ async def main_logic(bot, msg, db):
     if msg.text == keyboard_w.fast_ads:
         await set_global_status(chat_id, "fast_ads", db)
         await _new_post(bot, msg, db, 'itm_chat_id_status')
-        await bot.send_message(chat_id, "Напиши")
+        #await bot.send_message(chat_id, "Напиши")
         return
     elif msg.text == keyboard_w.announcements:
         await set_global_status(chat_id, "announcements", db)
         await _new_post(bot, msg, db, 'chat_id_status')
-        await bot.send_message(chat_id, "Напиши 2")
+        #await bot.send_message(chat_id, "Напиши 2")
         return
     elif msg.text == keyboard_w.tags:
         await set_global_status(chat_id, "tags", db)
@@ -415,6 +452,21 @@ async def main_logic(bot, msg, db):
     elif msg.text == keyboard_w.feedback:
         await set_global_status(chat_id, "feedback", db)
         await bot.send_message(chat_id, messages.feedback)
+        return
+    elif msg.text == keyboard_w.guide:
+        await set_global_status(chat_id, "guide", db)
+        await bot.send_message(chat_id, messages.guide, reply_markup=
+            await keyboard(keyboards[0]))
+        return
+    elif msg.text == 'В главное меню':
+        db.global_status.delete_one({'chat_id': chat_id})
+        await bot.send_message(chat_id, messages.feedback_good,
+            reply_markup=global_key)
+        return
+    elif msg.text == 'Назад':
+        await set_global_status(chat_id, "guide", db)
+        await bot.send_message(chat_id, messages.guide, reply_markup=
+            await keyboard(keyboards[0]))
         return
 
     gstatus = db.global_status.find_one({'chat_id': chat_id})
@@ -425,7 +477,9 @@ async def main_logic(bot, msg, db):
 
     gstatus = gstatus['status']
 
-    if gstatus == 'fast_ads':
+    if gstatus == 'guide':
+        await guide(bot, msg, db)
+    elif gstatus == 'fast_ads':
         await fast_ads(bot, msg, db)
     elif gstatus == 'announcements':
         await global_ads(bot, msg, db)
@@ -442,13 +496,5 @@ async def main_logic(bot, msg, db):
             reply_markup=global_key
         )
         db.global_status.delete_one({'chat_id': chat_id})
-
-
-
-
-
-
-
-
 
 
