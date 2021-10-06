@@ -147,6 +147,7 @@ async def send_new_posts(bot, items, last_id, db):
                 try_number += 1
                 if try_number > 25:
                     await bot.send_message(config.my_chat_id, 'Published')
+                    flag = 1
                 else:
                     await bot.send_message(config.my_chat_id, str(ex))
                 await asyncio.sleep(5)
